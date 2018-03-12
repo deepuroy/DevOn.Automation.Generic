@@ -17,8 +17,15 @@ namespace Automation.Api.Tests
             var proxyPort = ConfigurationManager.AppSettings["ProxyPort"].ToUpper();
             var proxyUrl = string.Format("{0}:{1}", proxyDomain, proxyPort);
             ServiceHandler.Proxy = new WebProxy(proxyUrl);
-            WebHeaderCollection BaseHeaders = new WebHeaderCollection();
             ServiceHandler.RequestHeaders = new WebHeaderCollection();
+        }
+
+        private void InitializeAccessToken()
+        {
+        }
+
+        private void InitializeLogin()
+        {
         }
     }
 }

@@ -20,7 +20,8 @@ namespace Automation.Api.Utilities
 
         public static void PostHttpRequest(this Uri serviceUrl, string requestBody, string contentType)
         {
-            CreateHttpRequest(HttpMethod.Post, serviceUrl);
+            CreateRequestBody(requestBody);
+            CreateHttpRequest(HttpMethod.Post, new Uri(BaseUrl, serviceUrl));
             Globals.Request.ContentLength = requestBody.Length;
             Globals.Request.ContentType = contentType;
             AddHttpRequestBody(requestBody);
@@ -29,13 +30,13 @@ namespace Automation.Api.Utilities
 
         public static void GetHttpRequest(this Uri serviceUrl)
         {
-            CreateHttpRequest(HttpMethod.Get, serviceUrl);
+            CreateHttpRequest(HttpMethod.Get, new Uri(BaseUrl, serviceUrl));
             GetHttpResponse();
         }
 
         public static void PutHttpRequest(this Uri serviceUrl, string requestBody)
         {
-            CreateHttpRequest(HttpMethod.Put, serviceUrl);
+            CreateHttpRequest(HttpMethod.Put, new Uri(BaseUrl, serviceUrl));
             Globals.Request.ContentLength = requestBody.Length;
             Globals.Request.ContentType = "application/json";
             AddHttpRequestBody(requestBody);
@@ -208,5 +209,48 @@ namespace Automation.Api.Utilities
             var parsed1 = JObject.Parse(rb);
             return parsed1[key].Value<string>();
         }
+
+        public static void CreateRequestBody(string pathToRequestBody, Dictionary<string, dynamic> inputs)
+        {
+            string[] moduleAndRequestBody = pathToRequestBody.Split('>');
+            string module = moduleAndRequestBody[0];
+            string jsonTokenForRequestBody = moduleAndRequestBody[1];
+
+            var path = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory + "\\RequestJSON\\" + module + ".json");
+            var text = File.ReadAllText(path);
+            var parsedReqestBody = (dynamic)JsonConvert.DeserializeObject(text);
+            parsedReqestBody = parsedReqestBody[jsonTokenForRequestBody];
+
+            UpdateParamValues(parsedReqestBody, inputs);
+            var requestBody = JsonConvert.SerializeObject(parsedReqestBody);
+        }
+
+        private static void UpdateParamValues(dynamic parameters, Dictionary<string, dynamic> inputs)
+        {
+            foreach (var input in inputs)
+            {
+                if (input.Key.Contains("."))
+                {
+                    var variables = input.Key.Split('.');
+                    var current = parameters;
+                    for (int i = 0; i < variables.Length - 1; i++)
+                    {
+                        current = current[variables[0]];
+                    }
+
+                    current[variables[variables.Length - 1]] = input.Value;
+                }
+                else
+                {
+                    if (input.Value.GetType().IsArray)
+                    {
+                        parameters[input.Key] = Newtonsoft.Json.Linq.JArray.Parse(JsonConvert.SerializeObject(input.Value));
+                    }
+                    else
+                    {
+                        parameters[input.Key] = input.Value;
+                    }
+                }
+            }
+        }
     }
-}
